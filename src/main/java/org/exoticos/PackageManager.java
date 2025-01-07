@@ -1,12 +1,14 @@
 package org.exoticos;
 
 import lombok.Data;
+import org.exoticos.util.CollectionUtil;
 
 import java.util.*;
+import java.util.stream.IntStream;
 
 @Data
 public class PackageManager {
-    private final Map<Integer, Set<SwPackage>> mapPackageLevels;
+    private final Map<Integer, List<SwPackage>> mapPackageLevels;
 
     private static final byte MIN_LEVEL = 1;
 
@@ -31,7 +33,7 @@ public class PackageManager {
     }
 
     // empezamos de level 1
-    public Set<SwPackage> getOrCreatePkgSet(Integer level) {
+    public List<SwPackage> getOrCreatePkgList(Integer level) {
         Objects.requireNonNull(level);
 
         level = normalizeLevel(level);
@@ -45,7 +47,7 @@ public class PackageManager {
 
             // si el top level actual es x y yo quiero crear n siendo n igual a 1 es correcto
             else {
-                final HashSet<SwPackage> hashSet = new HashSet<>(20);
+                final List<SwPackage> hashSet = CollectionUtil.newList(20);
                 mapPackageLevels.put(level, hashSet);
                 return hashSet;
             }
@@ -55,23 +57,50 @@ public class PackageManager {
         }
     }
 
-    public void addPackageToLevel(Integer level, SwPackage swPackage) {
-        getOrCreatePkgSet(level).add(swPackage);
+    public void insertInLevel(SwPackage swPackage, int level) {
+        final List<SwPackage> packagesList = getOrCreatePkgList(level);
+
+        if (packagesList.parallelStream().noneMatch(pkg -> pkg.getName().equals(swPackage.getName()))) {
+            packagesList.add(swPackage);
+        }
+    }
+
+    public void deleteDuplicated() {
+        // es valido hacer la limpieza con mas de dos niveles, sino no tiene sentido
+        if (mapPackageLevels.size() > 2) {
+            mapPackageLevels.entrySet()
+                    .stream()
+                    .sorted((o1, o2)
+                            -> o2.getKey().compareTo(o1.getKey()))
+                    .forEach(entry -> {
+                        final Integer currentLevel = entry.getKey();
+                        final List<SwPackage> listPackages = entry.getValue();
+                        listPackages.parallelStream()
+                                .forEach(currentPkg -> {
+                                    List<SwPackage> listPkgs;
+                                    for (int i = currentLevel - 1; i > 0; i--) {
+                                        listPkgs = mapPackageLevels.get(i);
+                                        listPkgs.removeIf(pkg ->
+                                                pkg.getName().equals(currentPkg.getName()));
+                                    }
+                                });
+                    });
+        }
     }
 
     public void movePackageToSupraLevel(SwPackage swPackage) {
-        final Map.Entry<Integer, Set<SwPackage>> packageEntry = findPackage(swPackage.getName());
+        final Map.Entry<Integer, List<SwPackage>> packageEntry = findPackage(swPackage.getName());
 
         if (packageEntry != null && packageEntry.getKey() < getTopPackagesLevel()) {
-            Set<SwPackage> packagesSetOri = getOrCreatePkgSet(packageEntry.getKey());
-            Set<SwPackage> packagesSetDest = getOrCreatePkgSet(packageEntry.getKey() + 1);
+            List<SwPackage> packagesSetOri = getOrCreatePkgList(packageEntry.getKey());
+            List<SwPackage> packagesSetDest = getOrCreatePkgList(packageEntry.getKey() + 1);
 
             packagesSetOri.remove(swPackage);
             packagesSetDest.add(swPackage);
         }
     }
 
-    public Map.Entry<Integer, Set<SwPackage>> findPackage(String name) {
+    public Map.Entry<Integer, List<SwPackage>> findPackage(String name) {
         return mapPackageLevels.entrySet().parallelStream()
                 .filter(entry -> entry.getValue().parallelStream()
                         .anyMatch(pkg -> pkg.getName().equals(name)))
@@ -79,13 +108,12 @@ public class PackageManager {
     }
 
     public List<SwPackage> getRootParentPackages(SwPackage swPackage) {
-        swPackage.getDependenciesSet()
+        swPackage.getDependenciesList()
                 .parallelStream()
                 .map(dependency -> {
                     List<SwPackage> listDeps;
                     if (dependency.isRoot()) {
-                        listDeps = new ArrayList<>(2);
-                        listDeps.add(dependency);
+                        listDeps = CollectionUtil.newList(dependency);
                     }
                     else {
                         listDeps = getRootParentPackages(dependency);

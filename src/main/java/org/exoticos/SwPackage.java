@@ -1,18 +1,18 @@
 package org.exoticos;
 
 import lombok.Data;
+import org.exoticos.util.CollectionUtil;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
 
 @Data
 public class SwPackage {
     private final String name;
-    private final Set<SwPackage> dependenciesSet;
+    private final List<SwPackage> dependenciesList;
 
     public SwPackage(String name) {
         this.name = name;
-        this.dependenciesSet = new HashSet<>(100);
+        this.dependenciesList = CollectionUtil.newList(100);
 
         if (this.name == null) {
             throw new NullPointerException("SwPackage name can not be null");
@@ -20,7 +20,7 @@ public class SwPackage {
     }
 
     public boolean isRoot() {
-        return dependenciesSet.isEmpty();
+        return dependenciesList.isEmpty();
     }
 
     @Override

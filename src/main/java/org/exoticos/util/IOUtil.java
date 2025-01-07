@@ -90,4 +90,5 @@ public class IOUtil {
     public boolean hasPkgbuildFile(File pkgFolder) {
         return new File(pkgFolder, "PKGBUILD").exists();
     }
+
 }

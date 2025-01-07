@@ -2,6 +2,7 @@ package org.exoticos;
 
 import lombok.Data;
 import lombok.extern.java.Log;
+import org.exoticos.exception.ContentNotFoundException;
 import org.exoticos.exception.PackageNotFoundException;
 import org.exoticos.util.IOUtil;
 import org.exoticos.util.StringUtil;
@@ -54,59 +55,34 @@ public class SuperAurHelper {
     * */
 
     public Set<String> getDependencyNames(String packageName) throws IOException, InterruptedException, PackageNotFoundException {
-        final String content = getPkgbuildContent(packageName);
-        if (!content.contains("depends")) {
-            return new HashSet<>(10);
-        }
-
+        final String pkgbuildContent = getPkgbuildContent(packageName);
         final StringUtil stringUtil = new StringUtil();
-        final Set<String> dependenciesSet = new HashSet<>(100);
-        final String[] splitLines = content.split("\n");
 
-        boolean foundDepsLine = false;
-        String line, subLine;
-
-        for (int i = 0; i < splitLines.length; i++) {
-            line = splitLines[i].trim();
-            if (foundDepsLine) {
-                if (line.isEmpty() || (line.length() == 1 && line.charAt(0) == ')') || line.contains("(")) {
-                    break;
-                }
-                else {
-                    dependenciesSet.add(stringUtil.getCleanedDepName(line));
-                }
+        final String dependenciesSubstring;
+        try {
+            dependenciesSubstring = stringUtil.subStringOf(
+                    pkgbuildContent, "depends", "\\(", "\\)");
+            if (dependenciesSubstring == null) {
+                throw new ContentNotFoundException("");
             }
-            else if (line.startsWith("depends")) {
-                foundDepsLine = true;
-                // solo una dep o mas deps en una linea
-                if (line.endsWith(")")) {
-                    subLine = line.split("\\(")[1].replace(")", "").trim();
-                    if (subLine.contains(" ")) {
-                        Arrays.stream(subLine.split(" ")).forEach(subsubLine -> {
-                            dependenciesSet.add(stringUtil.getCleanedDepName(subsubLine));
-                        });
-                    }
-                    else {
-                        dependenciesSet.add(stringUtil.getCleanedDepName(subLine));
-                    }
-                   break;
-                }
-            }
+        } catch (ContentNotFoundException e) {
+            System.out.println(e.getMessage());
+            return new HashSet<>(2);
         }
 
-        return dependenciesSet;
+        return stringUtil.getDependencyNamesFromText(dependenciesSubstring);
     }
 
     public SwPackage scanDependencies(String packageName, int currentLevel) throws IOException, InterruptedException, PackageNotFoundException {
         System.out.println("["+currentLevel+"] (DEPENDENCIES SCAN) PKG=" + packageName);
         final SwPackage currentSwPackage = new SwPackage(packageName);
-        final Set<SwPackage> dependenciesSet = currentSwPackage.getDependenciesSet();
+        final List<SwPackage> dependenciesSet = currentSwPackage.getDependenciesList();
         final Set<String> dependencyNamesSet = getDependencyNames(packageName);
 
         // esto perfectamente puede ser un parametro para ahorrarse la busqueda, mientras
         // quedara asi para validar funcionalidad
-        final Set<SwPackage> packagesSet = packageManager.getOrCreatePkgSet(currentLevel);
-        packagesSet.add(currentSwPackage);
+
+        packageManager.insertInLevel(currentSwPackage, currentLevel);
 
         dependencyNamesSet.stream()
                 .map(depName -> {

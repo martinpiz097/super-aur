@@ -3,6 +3,7 @@ package org.exoticos;
 import org.exoticos.exception.PackageNotFoundException;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -18,8 +19,9 @@ public class Main {
 
         SuperAurHelper superAurHelper = new SuperAurHelper();
         superAurHelper.scanDependencies(packageName, 1);
+        superAurHelper.getPackageManager().deleteDuplicated();
 
-        Map<Integer, Set<SwPackage>> mapDeps = superAurHelper.getPackageManager().getMapPackageLevels();
+        Map<Integer, List<SwPackage>> mapDeps = superAurHelper.getPackageManager().getMapPackageLevels();
 
         mapDeps.forEach((level, dependencies) -> {
             System.out.println("-----------------------------------");
