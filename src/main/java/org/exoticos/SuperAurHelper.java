@@ -37,7 +37,7 @@ public class SuperAurHelper {
                     + " no existe en la ruta " + pkgbuild.getPath());
         }
 
-//        System.out.println(packageName + " PKGBUILD, moved to " + pkgTempFolder.getPath() + " successfully");
+//        log.info(packageName + " PKGBUILD, moved to " + pkgTempFolder.getPath() + " successfully");
         return pkgbuild;
     }
 
@@ -66,39 +66,46 @@ public class SuperAurHelper {
                 throw new ContentNotFoundException("");
             }
         } catch (ContentNotFoundException e) {
-            System.out.println(e.getMessage());
+            log.info(e.getMessage());
             return new HashSet<>(2);
         }
 
         return stringUtil.getDependencyNamesFromText(dependenciesSubstring);
     }
 
-    public SwPackage scanDependencies(String packageName, int currentLevel) throws IOException, InterruptedException, PackageNotFoundException {
-        System.out.println("["+currentLevel+"] (DEPENDENCIES SCAN) PKG=" + packageName);
+    private SwPackage scanDependencies(String packageName, List<SwPackage> listLevelPkgs, int currentLevel) throws IOException, InterruptedException, PackageNotFoundException {
+        log.info("["+currentLevel+"] (DEPENDENCIES SCAN) PKG=" + packageName);
         final SwPackage currentSwPackage = new SwPackage(packageName);
-        final List<SwPackage> dependenciesSet = currentSwPackage.getDependenciesList();
+//        final List<SwPackage> dependenciesSet = currentSwPackage.getDependenciesList();
         final Set<String> dependencyNamesSet = getDependencyNames(packageName);
 
-        // esto perfectamente puede ser un parametro para ahorrarse la busqueda, mientras
-        // quedara asi para validar funcionalidad
+        listLevelPkgs.add(currentSwPackage);
 
-        packageManager.insertInLevel(currentSwPackage, currentLevel);
+        if (!dependencyNamesSet.isEmpty()) {
+            final int nextLevel = currentLevel + 1;
+            final List<SwPackage> listNewLevelPkgs = packageManager.getOrCreatePkgList(nextLevel);
 
-        dependencyNamesSet.stream()
-                .map(depName -> {
-                    try {
-                        return scanDependencies(depName, currentLevel + 1);
-                    } catch (IOException | InterruptedException e) {
-                        throw new RuntimeException(e);
-                    } catch (PackageNotFoundException e) {
-                        System.out.println(e.getMessage());
-                        return null;
-                    }
-                })
-                .filter(Objects::nonNull)
-                .forEach(dependenciesSet::add);
+            dependencyNamesSet.forEach(depName -> {
+                try {
+                    scanDependencies(depName, listNewLevelPkgs, nextLevel);
+                } catch (IOException | InterruptedException e) {
+                    throw new RuntimeException(e);
+                } catch (PackageNotFoundException e) {
+                    log.info(e.getMessage());
+                }
+            });
+        }
 
         return currentSwPackage;
+    }
+
+    public SwPackage scanDependencies(String packageName) throws IOException, InterruptedException, PackageNotFoundException {
+        final int currentLevel = 1;
+        final List<SwPackage> rootLevelPkgs = packageManager.createPkgList(currentLevel);
+        final SwPackage rootPackage = scanDependencies(packageName, rootLevelPkgs, currentLevel);
+
+        packageManager.deleteDuplicatedDependencies();
+        return rootPackage;
     }
 
     public SwPackage analizePackage(String packageName) {

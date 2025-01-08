@@ -13,7 +13,7 @@ public class CollectionUtil {
         }
     }
 
-    public static <E> List<E> newList(E... elements) {
+    public static <E> List<E> newElementList(E... elements) {
         List<E> list;
         final int elementsCount = elements != null ? elements.length : 0;
         if (elementsCount > 0) {

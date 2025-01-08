@@ -8,19 +8,15 @@ import java.util.List;
 @Data
 public class SwPackage {
     private final String name;
-    private final List<SwPackage> dependenciesList;
+//    private final List<SwPackage> dependenciesList;
 
     public SwPackage(String name) {
         this.name = name;
-        this.dependenciesList = CollectionUtil.newList(100);
+//        this.dependenciesList = CollectionUtil.newList(100);
 
         if (this.name == null) {
             throw new NullPointerException("SwPackage name can not be null");
         }
-    }
-
-    public boolean isRoot() {
-        return dependenciesList.isEmpty();
     }
 
     @Override

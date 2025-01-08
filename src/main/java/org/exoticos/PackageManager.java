@@ -1,10 +1,11 @@
 package org.exoticos;
 
 import lombok.Data;
+import org.exoticos.exception.LevelCreationException;
+import org.exoticos.exception.LevelInfoException;
 import org.exoticos.util.CollectionUtil;
 
 import java.util.*;
-import java.util.stream.IntStream;
 
 @Data
 public class PackageManager {
@@ -34,27 +35,45 @@ public class PackageManager {
 
     // empezamos de level 1
     public List<SwPackage> getOrCreatePkgList(Integer level) {
+        try {
+            return getPkgList(level);
+        } catch (LevelInfoException e) {
+            return createPkgList(level);
+        }
+    }
+
+    public List<SwPackage> createPkgList(Integer level) {
+        return createPkgList(level, CollectionUtil.newList(100));
+    }
+
+    public List<SwPackage> createPkgList(Integer level, List<SwPackage> listPkgs) {
         Objects.requireNonNull(level);
 
         level = normalizeLevel(level);
         final int topPackagesLevel = getTopPackagesLevel();
 
-        if (level > topPackagesLevel) {
-            // si yo quiero crear x + n siendo n > 1 no es correcto
-            if (isGiantLevel(level, topPackagesLevel)) {
-                throw new RuntimeException("Level to create giant than map top level");
-            }
+        if (level <= topPackagesLevel) {
+            throw new LevelCreationException(level, true);
+        }
+        if (isGiantLevel(level, topPackagesLevel)) {
+            throw new LevelCreationException(level, false);
+        }
 
-            // si el top level actual es x y yo quiero crear n siendo n igual a 1 es correcto
-            else {
-                final List<SwPackage> hashSet = CollectionUtil.newList(20);
-                mapPackageLevels.put(level, hashSet);
-                return hashSet;
-            }
+        final List<SwPackage> listPkg = CollectionUtil.newList();
+        mapPackageLevels.put(level, listPkgs);
+        return listPkg;
+    }
+
+    public List<SwPackage> getPkgList(Integer level) {
+        Objects.requireNonNull(level);
+        level = normalizeLevel(level);
+        final int topPackagesLevel = getTopPackagesLevel();
+
+        if (level > topPackagesLevel) {
+            throw new LevelInfoException(level);
         }
-        else {
-            return mapPackageLevels.get(level);
-        }
+
+        return mapPackageLevels.get(level);
     }
 
     public void insertInLevel(SwPackage swPackage, int level) {
@@ -65,7 +84,7 @@ public class PackageManager {
         }
     }
 
-    public void deleteDuplicated() {
+    public void deleteDuplicatedDependencies() {
         // es valido hacer la limpieza con mas de dos niveles, sino no tiene sentido
         if (mapPackageLevels.size() > 2) {
             mapPackageLevels.entrySet()
@@ -87,41 +106,5 @@ public class PackageManager {
                     });
         }
     }
-
-    public void movePackageToSupraLevel(SwPackage swPackage) {
-        final Map.Entry<Integer, List<SwPackage>> packageEntry = findPackage(swPackage.getName());
-
-        if (packageEntry != null && packageEntry.getKey() < getTopPackagesLevel()) {
-            List<SwPackage> packagesSetOri = getOrCreatePkgList(packageEntry.getKey());
-            List<SwPackage> packagesSetDest = getOrCreatePkgList(packageEntry.getKey() + 1);
-
-            packagesSetOri.remove(swPackage);
-            packagesSetDest.add(swPackage);
-        }
-    }
-
-    public Map.Entry<Integer, List<SwPackage>> findPackage(String name) {
-        return mapPackageLevels.entrySet().parallelStream()
-                .filter(entry -> entry.getValue().parallelStream()
-                        .anyMatch(pkg -> pkg.getName().equals(name)))
-                .findFirst().orElse(null);
-    }
-
-    public List<SwPackage> getRootParentPackages(SwPackage swPackage) {
-        swPackage.getDependenciesList()
-                .parallelStream()
-                .map(dependency -> {
-                    List<SwPackage> listDeps;
-                    if (dependency.isRoot()) {
-                        listDeps = CollectionUtil.newList(dependency);
-                    }
-                    else {
-                        listDeps = getRootParentPackages(dependency);
-                    }
-                    return listDeps;
-                });
-        return null;
-    }
-
 
 }

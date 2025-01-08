@@ -40,7 +40,7 @@ public class IOUtil {
         final Process process = executeProcess(cmdArray);
         final int exitCode = process.waitFor();
 
-//        System.out.println(Arrays.toString(cmdArray) + " process exit code:  " + exitCode);
+//        log.info(Arrays.toString(cmdArray) + " process exit code:  " + exitCode);
         if (exitCode == 0) {
             return process.inputReader();
         }
@@ -69,7 +69,7 @@ public class IOUtil {
     public File runPkgbuildDownloadCmdSequence(String baseHelper, String packageName) throws IOException, InterruptedException, PackageNotFoundException {
         // los paquetes que no tengan pkgbuild deben omitirse, son alias de otros, como es el caso de pipewire-zeroconf
 
-//        System.out.println("Downloading " + packageName + " PKGBUILD...");
+//        log.info("Downloading " + packageName + " PKGBUILD...");
         final String downloadPkgbuildOut = getProcessFirstLine(baseHelper, "-G", packageName, "--color=never");
         final String downloadFolderName = stringUtil.getCleanedPkgName(downloadPkgbuildOut);
 
@@ -79,7 +79,7 @@ public class IOUtil {
         final long currentTime = System.nanoTime();
         final String destFolder = "/tmp/" + currentTime;
 
-//        System.out.println("Downloaded " + downloadFolderName + " PKGBUILD, moving to " + destFolder + "...");
+//        log.info("Downloaded " + downloadFolderName + " PKGBUILD, moving to " + destFolder + "...");
 
         Process moveToTmpProc = executeProcess("mv", downloadFolderName, destFolder);
         moveToTmpProc.waitFor();
