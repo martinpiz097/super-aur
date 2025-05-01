@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class CommandInterpreter {
-
     private CommandResult getSucessfulResult(Process process) throws IOException {
         final byte[] processOutputBytes = process.getInputStream().readAllBytes();
         return new CommandResult(new String(processOutputBytes),
