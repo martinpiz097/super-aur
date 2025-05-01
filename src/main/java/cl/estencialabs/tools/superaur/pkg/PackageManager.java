@@ -220,20 +220,16 @@ public class PackageManager {
             pkgName = packageAnalysis.getMainPkg().getName();
         }
 
-        System.out.println("Scanning " + pkgName);
+//        System.out.println("Scanning " + pkgName);
         final Package pkg = new Package(pkgName);
         final List<String> listDeps = getPackageDependencies(pkgName);
 
         packageAnalysis.addPackage(pkg);
 
-        String finalPkgName = pkgName;
         listDeps.parallelStream()
                 .map(depName -> {
-                    Package depPkg = packageAnalysis.getPkg(depName);
-                    if (depPkg != null) {
-//                        System.out.println("[" + finalPkgName + "] Exists " + depName);
-                    } else {
-//                        System.out.println("[" + finalPkgName + "] " + depName);
+                    Package depPkg = packageAnalysis.getPkgClone(depName);
+                    if (depPkg == null) {
                         depPkg = analyze(packageAnalysis, depName);
                         packageAnalysis.addPackage(depPkg);
                     }

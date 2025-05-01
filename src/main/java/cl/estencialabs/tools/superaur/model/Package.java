@@ -108,28 +108,21 @@ public class Package {
         return getDependencyNames(0);
     }
 
-    public List<Dependency> getDependencyNamesRecursive(int startLevel) {
-        final List<Dependency> listDependencies = getRawDependencyList(startLevel);
-        return getCleanedDepList(listDependencies);
-    }
-
-    public List<Dependency> getDependencyNamesRecursive() {
-        return getDependencyNamesRecursive(0);
-    }
-
-    public List<Dependency> getDepTreeNamesRecursive(int startLevel) {
-        final List<Dependency> listDependencies = getRawDependencyList(startLevel);
+    public List<Dependency> getDepTreeNamesRecursive(int startLevel, boolean cleaned) {
+        List<Dependency> listDependencies = getRawDependencyList(startLevel);
         if (!listDependencies.isEmpty()) {
-            getRawDependencyList(startLevel)
-                    .sort(Comparator.comparingInt(Dependency::level)
-                            .thenComparing(Dependency::name));
+            if (cleaned) {
+                listDependencies = getCleanedDepList(listDependencies);
+            }
+            listDependencies.sort(Comparator.comparingInt(Dependency::level)
+                    .thenComparing(Dependency::name));
         }
 
         return listDependencies;
     }
 
-    public List<Dependency> getDepTreeNamesRecursive() {
-        return getDepTreeNamesRecursive(0);
+    public List<Dependency> getDepTreeNamesRecursive(boolean cleaned) {
+        return getDepTreeNamesRecursive(0, cleaned);
     }
 
     @Override

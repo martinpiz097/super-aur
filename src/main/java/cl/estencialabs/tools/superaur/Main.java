@@ -15,18 +15,14 @@ public class Main {
 //                "git"
                 ;
 
-//        PackageManager packageManager = new PackageManager(new YayAurHelper());
-////        List<String> listDeps = packageManager.executeDepNamesCommand(pkgName);
-////        listDeps.forEach(System.out::println);
-//
-//        Package pkg = packageManager.analyze(pkgName);
-//        List<Dependency> listDepTree = pkg.getDepTreeNamesRecursive();
-//
-//        System.out.println();
-//        System.out.println("---------------------------------------------------------------------");
-//        System.out.println();
-//        listDepTree.forEach(dependency -> {
-//            System.out.println("{"+dependency.level()+"} =>  " + dependency.name());
-//        });
+        PackageManager packageManager = new PackageManager(new YayAurHelper());
+        Package pkg = packageManager.analyze(pkgName);
+        List<Dependency> listDepTree = pkg.getDepTreeNamesRecursive(true);
+
+        System.out.println("---------------------------------------------------------------------");
+        System.out.println();
+        listDepTree.forEach(dependency -> {
+            System.out.println("{"+dependency.level()+"} =>  " + dependency.name());
+        });
     }
 }
