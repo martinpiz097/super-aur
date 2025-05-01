@@ -3,6 +3,7 @@ package cl.estencialabs.tools.superaur.util;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class CollectionUtil {
@@ -33,7 +34,8 @@ public class CollectionUtil {
     }
 
     public static <T> List<T> newFastListFromElements(Stream<T> stream) {
-        return newFastListFromElements(stream.toList());
+        final List<T> streamList = stream.collect(Collectors.toCollection(CollectionUtil::newFastList));
+        return newFastListFromElements(streamList);
     }
 
     public static <T> List<T> newFastListFromElements(T... elements) {

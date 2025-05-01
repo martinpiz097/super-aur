@@ -3,6 +3,7 @@ package cl.estencialabs.tools.superaur.pkg;
 import cl.estencialabs.tools.superaur.cmd.CommandResult;
 import cl.estencialabs.tools.superaur.config.PropertiesManager;
 import cl.estencialabs.tools.superaur.exception.SuperAurException;
+import cl.estencialabs.tools.superaur.exception.SuperAurRuntimeException;
 import cl.estencialabs.tools.superaur.model.Package;
 import cl.estencialabs.tools.superaur.util.CollectionUtil;
 import lombok.extern.java.Log;
@@ -10,6 +11,7 @@ import lombok.val;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -166,9 +168,9 @@ public class PackageManager {
                 .collect(Collectors.toCollection(CollectionUtil::newFastList));
     }
 
-    public List<String> getPackageDependencies(String pkgName) throws SuperAurException {
+    public List<String> getPackageDependencies(String pkgName) {
         if (pkgName == null || pkgName.isBlank()) {
-            throw new SuperAurException("pkgName value is null or blank");
+            throw new SuperAurRuntimeException("pkgName value is null or blank");
         }
 
         final CommandResult result = aurHelper.execPackageInfoCommand(pkgName);
@@ -213,23 +215,37 @@ public class PackageManager {
         return listBaseDeps;
     }
 
-    public Package analyze(String pkgName) throws SuperAurException {
+    public Package analyze(PackageAnalysis packageAnalysis, String pkgName) {
         if (pkgName == null || pkgName.isBlank()) {
-            return null;
+            pkgName = packageAnalysis.getMainPkg().getName();
         }
 
-        log.info("Scanning " + pkgName + "...");
+        System.out.println("Scanning " + pkgName);
         final Package pkg = new Package(pkgName);
         final List<String> listDeps = getPackageDependencies(pkgName);
 
-        listDeps.forEach(depName -> {
-            try {
-                pkg.addDependency(analyze(depName));
-            } catch (SuperAurException e) {
-                throw new RuntimeException(e);
-            }
-        });
+        packageAnalysis.addPackage(pkg);
+
+        String finalPkgName = pkgName;
+        listDeps.parallelStream()
+                .map(depName -> {
+                    Package depPkg = packageAnalysis.getPkg(depName);
+                    if (depPkg != null) {
+//                        System.out.println("[" + finalPkgName + "] Exists " + depName);
+                    } else {
+//                        System.out.println("[" + finalPkgName + "] " + depName);
+                        depPkg = analyze(packageAnalysis, depName);
+                        packageAnalysis.addPackage(depPkg);
+                    }
+                    return depPkg;
+                })
+                .sequential()
+                .forEach(pkg::addDependencyAndLink);
 
         return pkg;
+    }
+
+    public Package analyze(String pkgName) {
+        return analyze(new PackageAnalysis(pkgName), null);
     }
 }

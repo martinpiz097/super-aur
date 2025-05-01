@@ -14,10 +14,12 @@ import java.util.stream.Collectors;
 public class Package {
     private final String name;
     private final Map<String, Package> dependencies;
+//    private final Map<String, Package> children;
 
     public Package(String name) {
         this.name = name;
         this.dependencies = new HashMap<>();
+//        this.children = new HashMap<>();
     }
 
     private List<Dependency> getCleanedDepList(List<Dependency> listDependencies) {
@@ -27,7 +29,7 @@ public class Package {
         return mapGroupsByName.values().parallelStream()
                 .map(equalsDepsList ->
                         equalsDepsList.stream().max(
-                                Comparator.comparingInt(Dependency::level))
+                                        Comparator.comparingInt(Dependency::level))
                                 .orElse(null))
                 .collect(Collectors.toCollection(
                         CollectionUtil::newFastList));
@@ -47,26 +49,59 @@ public class Package {
         return listDependencies;
     }
 
-    public void addDependency(Package pkg) {
+    public void addDependencyAndLink(Package pkg) {
         String pkgName = pkg.getName();
-        Package existent = dependencies.get(pkgName);
-        if (existent != null) {
-            throw new DependencyAlreadyExistsException(pkgName);
+        Package existent = dependencies.isEmpty() ? null : dependencies.get(pkgName);
+        if (existent == null) {
+            dependencies.put(pkgName, pkg);
+//            pkg.addChild(this);
         }
-
-        dependencies.put(pkgName, pkg);
     }
+
+//    public void addChild(Package pkg) {
+//        String pkgName = pkg.getName();
+//        Package existent = children.isEmpty() ? null : children.get(pkgName);
+//        if (existent == null) {
+//            children.put(pkgName, pkg);
+//        }
+//    }
+
+//    public synchronized void upgradePackageLevel(String name) {
+//        if (hasChild(name)) {
+//            return;
+//        }
+//
+//        children.entrySet().parallelStream()
+//                .filter(entry -> {
+//
+//                })
+//    }
 
     public boolean isRoot() {
         return dependencies.isEmpty();
     }
+
+//    public boolean hasChild(String pkgName) {
+//        return !children.isEmpty() && children.keySet()
+//                .parallelStream()
+//                .anyMatch(pkgNameKey -> pkgNameKey.equals(pkgName));
+//    }
+//
+//    public Package getChild(String pkgName) {
+//        return !children.isEmpty() ? children.entrySet()
+//                .parallelStream()
+//                .filter(entry -> entry.getKey().equals(pkgName))
+//                .map(Map.Entry::getValue)
+//                .findFirst()
+//                .orElse(null) : null;
+//    }
 
     public List<Dependency> getDependencyNames(int startLevel) {
         return dependencies.keySet()
                 .stream()
                 .sorted()
                 .map(depName -> new Dependency(startLevel, depName))
-                .toList();
+                .collect(Collectors.toCollection(CollectionUtil::newFastList));
     }
 
     public List<Dependency> getDependencyNames() {
@@ -84,14 +119,33 @@ public class Package {
 
     public List<Dependency> getDepTreeNamesRecursive(int startLevel) {
         final List<Dependency> listDependencies = getRawDependencyList(startLevel);
-        getRawDependencyList(startLevel)
-                .sort(Comparator.comparingInt(Dependency::level)
-                        .thenComparing(Dependency::name));
+        if (!listDependencies.isEmpty()) {
+            getRawDependencyList(startLevel)
+                    .sort(Comparator.comparingInt(Dependency::level)
+                            .thenComparing(Dependency::name));
+        }
 
         return listDependencies;
     }
 
     public List<Dependency> getDepTreeNamesRecursive() {
         return getDepTreeNamesRecursive(0);
+    }
+
+    @Override
+    public Package clone() throws CloneNotSupportedException {
+        Package clone = new Package(name);
+
+        if (!isRoot()) {
+            dependencies.forEach((name, pkg) -> {
+                try {
+                    clone.addDependencyAndLink(pkg.clone());
+                } catch (CloneNotSupportedException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        }
+
+        return clone;
     }
 }

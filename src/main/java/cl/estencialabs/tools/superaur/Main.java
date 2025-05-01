@@ -1,6 +1,7 @@
 package cl.estencialabs.tools.superaur;
 
 import cl.estencialabs.tools.superaur.exception.SuperAurException;
+import cl.estencialabs.tools.superaur.model.Dependency;
 import cl.estencialabs.tools.superaur.model.Package;
 import cl.estencialabs.tools.superaur.pkg.PackageManager;
 import cl.estencialabs.tools.superaur.pkg.YayAurHelper;
@@ -14,11 +15,18 @@ public class Main {
 //                "git"
                 ;
 
-        PackageManager packageManager = new PackageManager(new YayAurHelper());
-//        List<String> listDeps = packageManager.executeDepNamesCommand(pkgName);
-//        listDeps.forEach(System.out::println);
-
-        Package pkg = packageManager.analyze(pkgName);
-        System.out.println(pkg);
+//        PackageManager packageManager = new PackageManager(new YayAurHelper());
+////        List<String> listDeps = packageManager.executeDepNamesCommand(pkgName);
+////        listDeps.forEach(System.out::println);
+//
+//        Package pkg = packageManager.analyze(pkgName);
+//        List<Dependency> listDepTree = pkg.getDepTreeNamesRecursive();
+//
+//        System.out.println();
+//        System.out.println("---------------------------------------------------------------------");
+//        System.out.println();
+//        listDepTree.forEach(dependency -> {
+//            System.out.println("{"+dependency.level()+"} =>  " + dependency.name());
+//        });
     }
 }
